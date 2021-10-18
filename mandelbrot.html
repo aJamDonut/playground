@@ -7,7 +7,7 @@
         <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.6.5/build/dat.gui.min.js"></script>
     </head>
     <body>
-        <canvas width="320" height="320" id="stage"></canvas>
+        <canvas width="250" height="150" id="stage"></canvas>
         <script type="text/javascript">
             (function() {
             var canvas = document.getElementById('stage')
@@ -116,11 +116,11 @@ const REAL_SET = { start: -2, end: 1 }
                     //SETTINGS.cx = SETTINGS.cx * 0.999999999
                 } else {
                     SETTINGS.scale = SETTINGS.scale*1.1;
-                    //SETTINGS.cx = SETTINGS.cx * 1.000000001
+                    SETTINGS.cx = SETTINGS.cx * 1.000000001
                 }
                 
                 draw();
-                setTimeout(changeData, 10);
+                window.requestAnimationFrame(changeData);
             }
 
             changeData();
