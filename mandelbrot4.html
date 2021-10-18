@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>
+
+    </title>
+    <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.6.5/build/dat.gui.min.js"></script>
+</head>
+
+<body>
+    <canvas width="250" height="250" id="stage"></canvas>
+    <script type="text/javascript">
+        (function () {
+            var canvas = document.getElementById('stage')
+            var ctx = canvas.getContext('2d')
+
+            const MAX_ITERATION = 100;
+            const WIDTH = ctx.canvas.width
+            const HEIGHT = ctx.canvas.height
+
+            class MandelReceiver {
+                constructor(workerCount) {
+                    var canvas = document.getElementById('stage')
+                    this.ctx = canvas.getContext('2d')
+                    this.draws = {};
+                    this.grids = {};
+                    this.workerCount = workerCount;
+                    this.lastUpdate = 0;
+                    this.refresh();
+                }
+                //{id: this.id, submit: this.lastSubmit++, grid:grid}
+                receiveGrid(data) {
+                    this.addUpdate(data.id, data.lastUpdate, data.grid);
+                    this.refresh();
+                }
+                addUpdate(id, lastUpdate, grid) {
+                    this.grids[id] = {submit: lastUpdate, grid: grid};
+                    if(!this.draws[lastUpdate]) {
+                        this.draws[lastUpdate] = {};
+                    }
+                    
+                    this.draws[lastUpdate][id] = grid
+                }
+
+                refresh() {
+
+                    if(!this.draws[this.lastUpdate]) {
+                        this.draws[this.lastUpdate] = {};
+                    }
+                   
+                    
+                    if(Object.keys(this.draws[this.lastUpdate]).length == this.workerCount) {
+                        //Must have all the grids;
+
+                        this.draw(this.draws[this.lastUpdate]);
+                        //now delete it
+                        delete this.draws[this.lastUpdate];
+                        this.lastUpdate++
+                        
+                        //TODO: enable and see how many, >4 bad
+                        //console.log(Object.keys(this.draws).length, "queued");
+                    }  
+                }
+                draw(grids) {
+                    let keys = Object.keys(grids)
+                    for(let i = 0; i < keys.length; i++) {
+
+                        this.drawGrid(i, grids[keys[i]]);
+
+                    }
+                }
+                drawGrid(id, grid) {
+                    
+                    if(grid.length == 0) {
+                        throw 'Too small '+id;
+                    }
+                    if(grid[0].length == 0) {
+                        console.error(grid);
+                        throw 'Too small Y '+id;
+
+                    }
+                    for(let i = 0; i < grid.length; i++) {
+                        for(let j = 0; j < grid[i].length; j++) {
+                            
+                            let ref = grid[i][j];
+                            let m = ref.m;
+                            let isMandelbrotSet = ref.mandel;
+                            let c = (m % 8 - 1) + 1;
+                            c = `#${c}${c}${c}`;
+                            this.ctx.fillStyle = (isMandelbrotSet) ? '#000' : c;
+                            this.ctx.fillRect(i, (id*(HEIGHT/this.workerCount))+j, 1, 1)
+                        }   
+                    }
+
+                }
+            }
+
+            
+            
+            function registerWorkers(workers) {
+                
+                workers.map((worker, i)=>{
+                    worker.onmessage = (evt) => {
+                        if(typeof receiver[evt.data.command] !== 'function') {
+                            console.error("[CLIENT] Don't know command:"+evt.data.command);
+                            return;
+                        }
+                        receiver[evt.data.command].call(receiver, evt.data.data)
+                    }
+                    worker.command = function(command, data) {
+                        worker.postMessage({command: command, data: data});
+                    }
+                    worker.command('setId', i);
+                    worker.command('setSize', {w:WIDTH, h:HEIGHT/workers.length});
+                    worker.command('setWorkerCount', workers.length);
+                    worker.command('loop');
+                })
+            }
+
+            let workers = [
+                new Worker('mandelworker.js'),
+                new Worker('mandelworker.js'),
+                new Worker('mandelworker.js'),
+                
+                new Worker('mandelworker.js'),
+                new Worker('mandelworker.js')
+            ]
+
+            const receiver = new MandelReceiver(workers.length);
+
+            registerWorkers(workers);
+
+
+  
+            
+
+            function changeData() {
+                if (SETTINGS.scale < 0.0000000010133716178293888) {
+                    // SETTINGS.dir="up";
+                }
+
+                if (SETTINGS.scale > 1.1) {
+                    // SETTINGS.dir="down";
+                }
+
+                if (SETTINGS.dir == "down") {
+                    SETTINGS.scale = SETTINGS.scale * 0.9;
+                    //SETTINGS.cx = SETTINGS.cx * 1.000000001
+                    //SETTINGS.cx = SETTINGS.cx * 0.999999999
+                } else {
+                    SETTINGS.scale = SETTINGS.scale * 1.1;
+                    SETTINGS.cx = SETTINGS.cx * 1.000000001
+                }
+
+                REAL_SET.it += 1;
+
+                draw();
+                window.requestAnimationFrame(changeData);
+            }
+
+            //changeData();
+
+
+        })();
+    </script>
+</body>
+
+</html>
