@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+
+        </title>
+        <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.6.5/build/dat.gui.min.js"></script>
+    </head>
+    <body>
+        <canvas width="320" height="320" id="stage"></canvas>
+        <script type="text/javascript">
+            (function() {
+            var canvas = document.getElementById('stage')
+            var ctx = canvas.getContext('2d')
+
+            const MAX_ITERATION = 100
+            const WIDTH = ctx.canvas.width
+            const HEIGHT = ctx.canvas.height
+            
+            const SETTINGS = {
+                xOff: 0,
+                yOff: 0,
+                scale: 1,
+                cx: 0.55,
+                cy: 1,
+                dir: "down"
+            };
+
+            const REAL_SET = { it: MAX_ITERATION, start: -2, end: 1 }
+            const IMAGINARY_SET = { it: MAX_ITERATION, start: -1, end: 1 }
+            
+            
+            const colors = new Array(64).fill(0).map((_, i) => i === 0 ? '#000' : `#${((1 << 24) * i/100000 | 0).toString(16)}`)
+
+            function draw() {
+
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                let cx = SETTINGS.cx;
+                let cy = SETTINGS.cy
+
+                let lx = SETTINGS.scale;
+                let ly = SETTINGS.scale;
+
+                for (let i = 0; i < WIDTH; i++) {
+                    for (let j = 0; j < HEIGHT; j++) {
+                        complex = {x: i, y: j, it: REAL_SET.it};
+
+                    
+
+                        //normalise to set
+                        complex.x = (REAL_SET.start+cx) + (complex.x / WIDTH - 0.5) * (REAL_SET.end - REAL_SET.start) * lx
+                        complex.y = (IMAGINARY_SET.start+cy) + (complex.y / HEIGHT - 0.5) * (IMAGINARY_SET.end - IMAGINARY_SET.start) * ly
+
+                        
+                        
+
+                        const [m, isMandelbrotSet] = mandelbrot(complex)
+                        ctx.fillStyle = colors[isMandelbrotSet ? 0 : (m % colors.length - 1) + 1]
+                        ctx.fillRect(i, j, 1, 1)
+                    }
+                }
+            }
+
+            
+            function mandelbrot(c) {
+                let z = { x: 0, y: 0 }, n = 0, p, d;
+                do {
+                    p = {
+                        x: Math.pow(z.x, 2) - Math.pow(z.y, 2),
+                        y: 2 * z.x * z.y
+                    }
+                    z = {
+                        x: p.x + c.x,
+                        y: p.y + c.y
+                    }
+                    d = Math.sqrt(Math.pow(z.x, 2) + Math.pow(z.y, 2))
+                    n += 1
+                } while (d <= 2 && n < c.it)
+                return [n, d <= 2]
+            }
+
+
+            draw();
+
+            /*
+const REAL_SET = { start: -2, end: 1 }
+            const IMAGINARY_SET = { start: -1, end: 1 }
+            */
+
+            let gui = new dat.GUI();
+            let properties = gui.addFolder('Properties');
+
+            properties.add(SETTINGS, 'scale', -10.5, 10.5).onChange(draw);
+            properties.add(REAL_SET, 'start', -20, 20).onChange(draw);
+            properties.add(REAL_SET, 'end', -20, 20).onChange(draw);
+            properties.add(REAL_SET, 'it', 1, 100).onChange(draw);
+
+            properties.add(IMAGINARY_SET, 'start', -20, 20).onChange(draw);
+            properties.add(IMAGINARY_SET, 'end', -20, 20).onChange(draw);
+
+            properties.add(SETTINGS, 'xOff', -1000, 1000).onChange(draw);
+            properties.add(SETTINGS, 'yOff', -1000, 1000).onChange(draw);
+
+            function changeData () {
+                if(SETTINGS.scale < 0.0000000010133716178293888) {
+                    SETTINGS.dir="up";
+                }
+
+                if(SETTINGS.scale > 1.1) {
+                    SETTINGS.dir="down";
+                }
+
+                if(SETTINGS.dir=="down") {
+                    SETTINGS.scale = SETTINGS.scale*0.9;
+                    SETTINGS.cx = SETTINGS.cx * 1.000000001
+                    //SETTINGS.cx = SETTINGS.cx * 0.999999999
+                } else {
+                    SETTINGS.scale = SETTINGS.scale*1.1;
+                    //SETTINGS.cx = SETTINGS.cx * 1.000000001
+                }
+                
+                draw();
+                setTimeout(changeData, 10);
+            }
+
+            changeData();
+
+
+            })();
+        </script>
+    </body>
+</html>
